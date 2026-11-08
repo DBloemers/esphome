@@ -26,8 +26,11 @@ def _generate_cmake(tmp_path: Path, pch_on: bool = True) -> str:
             "esphome.components.zephyr.library.generate_zephyr_modules",
             return_value=[],
         ),
-        patch.object(nrf52, "get_cmake_compile_flags", return_value=["-Os"]),
-        patch.object(nrf52, "get_cmake_link_flags", return_value=[]),
+        patch(
+            "esphome.components.zephyr.build.get_cmake_compile_flags",
+            return_value=["-Os"],
+        ),
+        patch("esphome.components.zephyr.build.get_cmake_link_flags", return_value=[]),
     ):
         nrf52._generate_cmake_lists(pch_on)
     return (tmp_path / "build" / "zephyr" / "CMakeLists.txt").read_text()

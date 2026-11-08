@@ -74,7 +74,11 @@ void Logger::pre_setup() {
     static const struct device *uart_dev = nullptr;
     switch (this->uart_) {
       case UART_SELECTION_UART0:  // NOLINT(bugprone-branch-clone)
+#ifdef ESPHOME_LOGGER_UART0_NODE
         uart_dev = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(ESPHOME_LOGGER_UART0_NODE));
+#else
+        uart_dev = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_console));
+#endif
         break;
       case UART_SELECTION_UART1:
         uart_dev = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(uart1));

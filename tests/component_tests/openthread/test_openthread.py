@@ -318,3 +318,46 @@ def test_border_router_accepts_supported_config(
     _set_esp32_idf_core(set_core_config)
 
     _run_final_validation(otbr_config, full_config)
+
+
+def test_efr32_openthread_and_encrypted_api(
+    tmp_path: Path, generate_main: Callable[[str | Path], str]
+) -> None:
+    """The EFR32 path uses upstream Zephyr networking, OpenThread and SRP."""
+    from esphome.components.zephyr import zephyr_data
+
+    config_path = tmp_path / "nano-matter.yaml"
+    config_path.write_text(
+        """
+esphome:
+  name: nano-matter
+efr32:
+  board: arduino_nano_matter
+openthread:
+  tlv: "0E080000000000010000"
+api:
+  encryption:
+    key: "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+""",
+        encoding="utf-8",
+    )
+    generate_main(config_path)
+    defines = {define.name: define.value for define in CORE.defines}
+    assert "USE_API_NOISE" in defines
+    assert "USE_OPENTHREAD_SRP" in defines
+    assert "USE_SOCKET_IMPL_BSD_SOCKETS" in defines
+    assert str(defines["USE_NETWORK_IPV6"]) == "true"
+    assert str(defines["USE_NETWORK_IPV4"]) == "false"
+
+    options = zephyr_data()["prj_conf"][""]
+    for option in (
+        "CONFIG_NET_L2_OPENTHREAD",
+        "CONFIG_OPENTHREAD_FTD",
+        "CONFIG_OPENTHREAD_MANUAL_START",
+        "CONFIG_OPENTHREAD_SRP_CLIENT",
+        "CONFIG_NET_SOCKETS",
+    ):
+        assert options[option][0] is True
+    assert "CONFIG_ZVFS_POLL_MAX" in options
+    assert "CONFIG_NET_SOCKETS_POLL_MAX" not in options
+    assert not any("OPENTHREAD_NORDIC_LIBRARY" in name for name in options)

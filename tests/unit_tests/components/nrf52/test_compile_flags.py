@@ -23,7 +23,7 @@ def test_double_promotion_warning_is_off_for_the_app(tmp_path: Path) -> None:
             "esphome.components.zephyr.library.generate_zephyr_modules",
             return_value=[],
         ),
-        patch.object(nrf52, "get_cmake_link_flags", return_value=[]),
+        patch("esphome.components.zephyr.build.get_cmake_link_flags", return_value=[]),
     ):
         nrf52._generate_cmake_lists(False)
     text = (tmp_path / "build" / "zephyr" / "CMakeLists.txt").read_text()
@@ -53,7 +53,7 @@ def test_project_flags_reach_the_libraries(tmp_path: Path) -> None:
             "esphome.components.zephyr.library.generate_zephyr_modules",
             return_value=[tmp_path / "lvgl"],
         ),
-        patch.object(nrf52, "get_cmake_link_flags", return_value=[]),
+        patch("esphome.components.zephyr.build.get_cmake_link_flags", return_value=[]),
     ):
         nrf52._generate_cmake_lists(False)
     text = (tmp_path / "build" / "zephyr" / "CMakeLists.txt").read_text()

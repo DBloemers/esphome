@@ -51,6 +51,7 @@ from esphome.const import (
     PLATFORM_HOST,
     PLATFORM_RP2,
     PlatformFramework,
+    Toolchain,
     __version__ as ESPHOME_VERSION,
 )
 from esphome.core import (
@@ -921,7 +922,11 @@ async def to_code(config: ConfigType) -> None:
 
     CORE.add_job(_add_automations, config)
 
-    if not (CORE.using_toolchain_esp_idf or CORE.using_toolchain_sdk_nrf):
+    if not (
+        CORE.using_toolchain_esp_idf
+        or CORE.toolchain == Toolchain.ZEPHYR
+        or CORE.using_toolchain_sdk_nrf
+    ):
         cg.add_build_flag("-fno-exceptions")
 
     # Libraries
@@ -1104,6 +1109,7 @@ _filter_platform_sources = filter_source_files_from_platform(
             PlatformFramework.HOST_NATIVE,
         },
         "wake/wake_zephyr.cpp": {
+            PlatformFramework.EFR32_ZEPHYR,
             PlatformFramework.NRF52_ZEPHYR,
         },
         # Note: lock_free_queue.h and event_pool.h are header files and don't need to be filtered

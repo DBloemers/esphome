@@ -28,6 +28,7 @@ from esphome.const import (
     PLATFORM_NRF52,
     PLATFORM_RP2,
     PLATFORM_RTL87XX,
+    Platform,
     PlatformFramework,
 )
 from esphome.core import CORE, ID, CoroPriority, Lambda, coroutine_with_priority
@@ -223,6 +224,8 @@ def uart_selection(value: Any) -> str:
         if get_nrf52_variant() in VARIANTS_WITHOUT_USB:
             return cv.one_of(UART0, upper=True)(value)
         return cv.one_of(*UART_SELECTION_NRF52, upper=True)(value)
+    if CORE.target_platform == Platform.EFR32:
+        return cv.one_of(UART0, upper=True)(value)
     raise NotImplementedError
 
 
@@ -398,6 +401,7 @@ CONFIG_SCHEMA = cv.All(
                 ln882x=DEFAULT,
                 rtl87xx=DEFAULT,
                 nrf52=USB_CDC,
+                efr32=UART0,
                 # No USB device on the nRF52832 and the nRF54L15, and USB does not work yet on the nRF54LM20
                 nrf52_52832=UART0,
                 nrf52_54l15=UART0,
@@ -412,6 +416,7 @@ CONFIG_SCHEMA = cv.All(
                         PLATFORM_LN882X,
                         PLATFORM_RTL87XX,
                         PLATFORM_NRF52,
+                        Platform.EFR32,
                     ]
                 ),
                 uart_selection,
@@ -688,6 +693,10 @@ async def _late_logger_init(config: ConfigType) -> None:
             if config[CONF_HARDWARE_UART] == USB_CDC:
                 cg.add_define("USE_LOGGER_UART_SELECTION_USB_CDC")
                 zephyr_add_prj_conf("UART_LINE_CTRL", True)
+    elif CORE.target_platform == Platform.EFR32 and has_serial_logging:
+        from esphome.components.zephyr import zephyr_add_overlay
+
+        zephyr_add_overlay(f"&usart0 {{ current-speed = <{baud_rate}>; }};")
 
     # Register at end for safe mode
     await cg.register_component(log, config)
@@ -828,7 +837,10 @@ FILTER_SOURCE_FILES = filter_source_files_from_platform(
             PlatformFramework.RTL87XX_ARDUINO,
             PlatformFramework.LN882X_ARDUINO,
         },
-        "logger_zephyr.cpp": {PlatformFramework.NRF52_ZEPHYR},
+        "logger_zephyr.cpp": {
+            PlatformFramework.EFR32_ZEPHYR,
+            PlatformFramework.NRF52_ZEPHYR,
+        },
         "task_log_buffer_esp32.cpp": {
             PlatformFramework.ESP32_ARDUINO,
             PlatformFramework.ESP32_IDF,
@@ -839,7 +851,10 @@ FILTER_SOURCE_FILES = filter_source_files_from_platform(
             PlatformFramework.RTL87XX_ARDUINO,
             PlatformFramework.LN882X_ARDUINO,
         },
-        "task_log_buffer_zephyr.cpp": {PlatformFramework.NRF52_ZEPHYR},
+        "task_log_buffer_zephyr.cpp": {
+            PlatformFramework.EFR32_ZEPHYR,
+            PlatformFramework.NRF52_ZEPHYR,
+        },
     }
 )
 

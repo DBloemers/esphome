@@ -466,6 +466,7 @@ CONFIG_SCHEMA = cv.All(
                 host=4,  # Abundant resources
                 ln882x=4,  # Moderate RAM
                 nrf52=4,  # ~256KB RAM, BSD sockets
+                efr32=4,
             ): cv.int_range(min=1, max=10),
             cv.SplitDefault(
                 CONF_MAX_CONNECTIONS,
@@ -477,6 +478,7 @@ CONFIG_SCHEMA = cv.All(
                 host=8,  # Abundant resources
                 ln882x=5,  # Moderate RAM
                 nrf52=4,  # ~256KB RAM, BSD sockets, Thread (single HA controller)
+                efr32=4,
             ): cv.int_range(min=1, max=20),
             # Max queued messages per connection, and 2 KB of backlog per slot up
             # to 64 KB (a lone message is exempt), before the connection is dropped
@@ -488,6 +490,7 @@ CONFIG_SCHEMA = cv.All(
                 rp2=8,  # Moderate RAM
                 bk72xx=8,  # Moderate RAM
                 nrf52=8,  # Moderate RAM
+                efr32=8,
                 rtl87xx=8,  # Moderate RAM
                 host=16,  # Abundant resources
                 ln882x=8,  # Moderate RAM

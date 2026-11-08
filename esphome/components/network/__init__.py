@@ -388,6 +388,7 @@ def _validate_priority_list(value: Any) -> list[dict[str, str]]:
 # the schema does for a user-typed 'enable_ipv6: true'.
 _ENABLE_IPV6_FRAMEWORK_VERSION_VALIDATOR = cv.require_framework_version(
     bk72xx_arduino=cv.Version(1, 7, 0),
+    efr32_zephyr=cv.Version(0, 0, 0),
     esp_idf=cv.Version(0, 0, 0),
     esp32_arduino=cv.Version(0, 0, 0),
     esp8266_arduino=cv.Version(0, 0, 0),
@@ -626,18 +627,19 @@ async def to_code(config: ConfigType) -> None:
             )
         add_idf_sdkconfig_option("CONFIG_LWIP_TCP_SND_BUF_DEFAULT", tcp_send_buffer)
 
-    if CORE.is_nrf52:
+    if CORE.using_zephyr:
         zephyr_add_prj_conf("NETWORKING", True)
         zephyr_add_prj_conf("NET_IPV4", enable_ipv4)
         zephyr_add_prj_conf("NET_IPV6", enable_ipv6)
         zephyr_add_prj_conf("NET_TCP", True)
         zephyr_add_prj_conf("NET_UDP", True)
-        # The nRF Connect SDK replaces mbedTLS with PSA/Oberon crypto and does not provide the
-        # legacy mbedtls_md5() symbol that Zephyr's RFC 6528 TCP ISN generator links against
-        # (selecting MBEDTLS_MAC_MD5_ENABLED does not bring in the legacy C API here). Disable it so
-        # TCP links; Zephyr falls back to sys_rand32_get() for the ISN (randomized, but not the
-        # RFC 6528 keyed hash).
-        zephyr_add_prj_conf("NET_TCP_ISN_RFC6528", False)
+        if CORE.is_nrf52:
+            # The nRF Connect SDK replaces mbedTLS with PSA/Oberon crypto and does not provide the
+            # legacy mbedtls_md5() symbol that Zephyr's RFC 6528 TCP ISN generator links against
+            # (selecting MBEDTLS_MAC_MD5_ENABLED does not bring in the legacy C API here). Disable it so
+            # TCP links; Zephyr falls back to sys_rand32_get() for the ISN (randomized, but not the
+            # RFC 6528 keyed hash).
+            zephyr_add_prj_conf("NET_TCP_ISN_RFC6528", False)
         # Enlarge the Zephyr network buffer pool and TCP windows for the Thread path.
         # Zephyr's defaults are tiny: NET_BUF_TX_COUNT=16 * NET_BUF_DATA_SIZE=128 is only
         # ~2 KB of TX data -- barely one 1280-byte IPv6 packet once 6LoWPAN fragments it.
@@ -662,7 +664,7 @@ async def to_code(config: ConfigType) -> None:
     if CORE.is_esp32:
         add_idf_sdkconfig_option("CONFIG_LWIP_IPV6", enable_ipv6)
         add_idf_sdkconfig_option("CONFIG_LWIP_IPV6_AUTOCONFIG", enable_ipv6)
-    elif enable_ipv6:
+    elif enable_ipv6 and not CORE.using_zephyr:
         cg.add_build_flag("-DCONFIG_LWIP_IPV6")
         cg.add_build_flag("-DCONFIG_LWIP_IPV6_AUTOCONFIG")
         if CORE.is_bk72xx:

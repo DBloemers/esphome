@@ -266,6 +266,7 @@ CONFIG_SCHEMA = cv.Schema(
             rtl87xx=IMPLEMENTATION_LWIP_SOCKETS,
             host=IMPLEMENTATION_BSD_SOCKETS,
             nrf52=IMPLEMENTATION_BSD_SOCKETS,
+            efr32=IMPLEMENTATION_BSD_SOCKETS,
         ): cv.one_of(
             IMPLEMENTATION_LWIP_TCP,
             IMPLEMENTATION_LWIP_SOCKETS,
@@ -292,9 +293,8 @@ async def to_code(config: ConfigType) -> None:
             zephyr_add_prj_conf("POSIX_API", True)
             # Zephyr's default of 3 poll entries is too few once API, OTA, mDNS and UDP
             # run together
-            zephyr_add_prj_conf(
-                "NET_SOCKETS_POLL_MAX", zephyr_poll_max(get_socket_counts())
-            )
+            poll_max = "NET_SOCKETS_POLL_MAX" if CORE.is_nrf52 else "ZVFS_POLL_MAX"
+            zephyr_add_prj_conf(poll_max, zephyr_poll_max(get_socket_counts()))
     # ESP32 and LibreTiny both have LwIP >= 2.1.3 with lwip_socket_dbg_get_socket()
     # and FreeRTOS task notifications — enable fast select to bypass lwip_select().
     # Only when not using lwip_tcp, which does not provide select() support.

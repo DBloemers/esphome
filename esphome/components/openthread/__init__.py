@@ -32,7 +32,6 @@ from esphome.components.esp32 import (
 )
 from esphome.components.mdns import MDNSComponent, enable_mdns_storage
 from esphome.components.network import add_use_address, request_ipv4_off, require_ipv6
-from esphome.components.nrf52.framework import include_west_project
 from esphome.components.zephyr import zephyr_add_prj_conf, zephyr_add_prj_conf_min
 from esphome.config_helpers import filter_source_files_from_platform
 import esphome.config_validation as cv
@@ -59,6 +58,7 @@ from esphome.const import (
     KEY_CORE,
     KEY_FRAMEWORK_VERSION,
     PLATFORM_ESP32,
+    Platform,
     PlatformFramework,
 )
 from esphome.core import (
@@ -318,7 +318,7 @@ def _validate(config: ConfigType) -> ConfigType:
         config[CONF_USE_ADDRESS] = f"{CORE.name}.local"
     if CORE.using_zephyr and CONF_TLV not in config:
         raise cv.Invalid(
-            "On nRF52, OpenThread credentials must be provided via 'tlv'. "
+            "On Zephyr, OpenThread credentials must be provided via 'tlv'. "
             "Individual parameters (network_key, pan_id, channel, etc.) are not yet supported on this platform."
         )
     device_type = config.get(CONF_DEVICE_TYPE)
@@ -517,7 +517,10 @@ FILTER_SOURCE_FILES = filter_source_files_from_platform(
         "openthread_esp.cpp": {
             PlatformFramework.ESP32_IDF,
         },
-        "openthread_zephyr.cpp": {PlatformFramework.NRF52_ZEPHYR},
+        "openthread_zephyr.cpp": {
+            PlatformFramework.EFR32_ZEPHYR,
+            PlatformFramework.NRF52_ZEPHYR,
+        },
     }
 )
 
@@ -581,16 +584,22 @@ async def to_code(config: ConfigType) -> None:
         set_sdkconfig_options(config)
         _write_custom_header(config)
     elif CORE.using_zephyr:
-        # Crypto through PSA: mbedtls, plus Oberon from SDK 2.7
-        include_west_project("mbedtls")
-        include_west_project("openthread")
-        if CORE.data[KEY_CORE][KEY_FRAMEWORK_VERSION] >= cv.Version(2, 7, 0):
-            include_west_project("oberon-psa-crypto")
+        device_type = config[CONF_DEVICE_TYPE]
+        if CORE.is_nrf52:
+            from esphome.components.nrf52.framework import include_west_project
+
+            # Crypto through PSA: mbedtls, plus Oberon from SDK 2.7.
+            include_west_project("mbedtls")
+            include_west_project("openthread")
+            if CORE.data[KEY_CORE][KEY_FRAMEWORK_VERSION] >= cv.Version(2, 7, 0):
+                include_west_project("oberon-psa-crypto")
+            zephyr_add_prj_conf(f"OPENTHREAD_NORDIC_LIBRARY_{device_type}", True)
+        elif CORE.target_platform == Platform.EFR32:
+            # Start after ESPHome has applied the active dataset.
+            zephyr_add_prj_conf("OPENTHREAD_MANUAL_START", True)
+            zephyr_add_prj_conf("OPENTHREAD_SRP_CLIENT", True)
         zephyr_add_prj_conf("NET_L2_OPENTHREAD", True)
-        zephyr_add_prj_conf(
-            f"OPENTHREAD_NORDIC_LIBRARY_{config.get(CONF_DEVICE_TYPE)}", True
-        )
-        zephyr_add_prj_conf(f"OPENTHREAD_{config.get(CONF_DEVICE_TYPE)}", True)
+        zephyr_add_prj_conf(f"OPENTHREAD_{device_type}", True)
         zephyr_add_prj_conf_min("MAIN_STACK_SIZE", 4096)
 
 

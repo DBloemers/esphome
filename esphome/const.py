@@ -21,6 +21,7 @@ class Toolchain(StrEnum):
     PLATFORMIO = "platformio"
     ESP_IDF = "esp-idf"
     SDK_NRF = "sdk-nrf"
+    ZEPHYR = "zephyr"
     # ESP8266: the Arduino core built directly (no PlatformIO)
     ARDUINO = "arduino"
     # host: the system C/C++ compiler driven by ninja (no PlatformIO)
@@ -38,7 +39,13 @@ class ErrorFormat(StrEnum):
 
 # Toolchains that drive their build natively and never read platformio.ini.
 NATIVE_TOOLCHAINS = frozenset(
-    {Toolchain.ESP_IDF, Toolchain.ARDUINO, Toolchain.HOST, Toolchain.SDK_NRF}
+    {
+        Toolchain.ESP_IDF,
+        Toolchain.ARDUINO,
+        Toolchain.HOST,
+        Toolchain.SDK_NRF,
+        Toolchain.ZEPHYR,
+    }
 )
 
 
@@ -46,6 +53,7 @@ class Platform(StrEnum):
     """Platform identifiers for ESPHome."""
 
     BK72XX = "bk72xx"
+    EFR32 = "efr32"
     ESP32 = "esp32"
     ESP8266 = "esp8266"
     HOST = "host"
@@ -119,6 +127,7 @@ class PlatformFramework(Enum):
     LN882X_ARDUINO = (Platform.LN882X, Framework.ARDUINO)
 
     # Zephyr framework platforms
+    EFR32_ZEPHYR = (Platform.EFR32, Framework.ZEPHYR)
     NRF52_ZEPHYR = (Platform.NRF52, Framework.ZEPHYR)
 
     # Host platform (native)
